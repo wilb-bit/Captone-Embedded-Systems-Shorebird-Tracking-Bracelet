@@ -5,4 +5,4 @@
 * then reading the peripheral real-time clock via SPI (line 403)
 * reading the analogue light sensor (line 425),
 * the memory location, time and light sensor reading are then written to the peripheral EEPROM.
-* the device is then put to sleep for 10 seconds the process is repeated.
+* the device is then put to sleep for 10 seconds and then the process is repeated.
