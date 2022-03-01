@@ -60,44 +60,11 @@
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+//adc variables
 uint32_t g_AdcVinn;
 float g_AdcBandgap;
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-static void ADC_Configuration(void);
-/* #include "nvds.h"
-#include "fsl_syscon.h" */
-// end adc config
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
-#define DEMO_USART USART0
-#define DEMO_USART_BAUDRATE 115200
-#define DEMO_USART_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
-#define RTC_INTERRUPT_THRESHOLD (32768U * 5U) //set time to sleep for
-
-
-
-//spi
-#define EXAMPLE_SPI_MASTER SPI0
-#define EXAMPLE_SPI_MASTER_IRQ FLEXCOMM2_IRQn
-#define EXAMPLE_SPI_MASTER_CLK_SRC kCLOCK_BusClk
-#define EXAMPLE_SPI_MASTER_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
-#define EXAMPLE_SPI_SSEL 1
-#define EXAMPLE_SPI_SPOL (kSPI_SpolActiveAllLow | kSPI_Spol1ActiveHigh)
-
-
-
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-extern void BOARD_WakeupRestore(void);
-
-/*******************************************************************************
- * Variables
- ******************************************************************************/
+//clock and eeprom variables
 volatile uint8_t g_RtcFreeRunningFlag;
 #define BUFFER_SIZE (5)
 static uint8_t srcBuff[BUFFER_SIZE];
@@ -117,26 +84,40 @@ static uint8_t seconds;
 static uint8_t adc4;
 static uint8_t mem_loc;
 
+/*******************************************************************************
+ * Prototypes
+ ******************************************************************************/
+static void ADC_Configuration(void);
+extern void BOARD_WakeupRestore(void);
 
+/*******************************************************************************
+ * Definitions
+ ******************************************************************************/
+#define DEMO_USART USART0
+#define DEMO_USART_BAUDRATE 115200
+#define DEMO_USART_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
+#define RTC_INTERRUPT_THRESHOLD (32768U * 5U) //set time to sleep for
+
+
+
+//spi
+#define EXAMPLE_SPI_MASTER SPI0
+#define EXAMPLE_SPI_MASTER_IRQ FLEXCOMM2_IRQn
+#define EXAMPLE_SPI_MASTER_CLK_SRC kCLOCK_BusClk
+#define EXAMPLE_SPI_MASTER_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
+#define EXAMPLE_SPI_SSEL 1
+#define EXAMPLE_SPI_SPOL (kSPI_SpolActiveAllLow | kSPI_Spol1ActiveHigh)
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
-/*flash_config_t g_flash_cfg;*/
+/*******************************************************************************
+ * Sleep set up. provided by manufactueres of the device.
+ ******************************************************************************/
 
 /* Reinitialize peripherals after waked up from PD, this function will be called in critical area */
 void BOARD_WakeupRestore(void)
 {
-    //    BUTTON_EnableInterrupt();
-
-    /*
-     * config.baudRate_Bps = 115200U;
-     * config.parityMode = kUART_ParityDisabled;
-     * config.stopBitCount = kUART_OneStopBit;
-     * config.loopback = false;
-     * config.enableTx = false;
-     * config.enableRx = false;
-     */
     usart_config_t config;
     USART_GetDefaultConfig(&config);
     config.baudRate_Bps = DEMO_USART_BAUDRATE;
@@ -158,7 +139,6 @@ void delay(uint32_t dly)
 
 void RTC_FR_IRQHandler(void)
 {
-    //    if (RTC_GetStatusFlags(RTC) & (uint32_t)kRTC_FreeRunningInterruptFlag)
     {
         g_RtcFreeRunningFlag = 1U;
     }
@@ -183,7 +163,6 @@ void wakeup_by_capa_sensor(void)
 {
     /* config PA15 as cs's input */
     IOCON_PinMuxSet(IOCON, 0U, 15U, IOCON_FUNC1);
-    /* IOCON_PinMuxSet(IOCON, 0U, 14U, IOCON_FUNC1); */
 
     /* config PA15 to High-Z */
     SYSCON->PIO_PULL_CFG[0] &= ~0xC0000000U;
@@ -216,7 +195,9 @@ void CS_WAKEUP_IRQHandler(void)
     NVIC_ClearPendingIRQ(CS_WAKEUP_IRQn);
 }
 
-/* #define CAP_SENSOR_WAKEUP */
+/*******************************************************************************
+ * ADC configuration 
+ ******************************************************************************/
 static void ADC_Configuration(void)
 {
     adc_config_t adcConfigStruct;
@@ -245,11 +226,15 @@ static void ADC_Configuration(void)
     /* Enable ADC */
     ADC_Enable(DEMO_ADC_BASE, true);
 }
-/*!
- * @brief Main function
+
+/*
+ * Main function. 
  */
 int main(void)
 {
+/*
+ * Wake from sleep. 
+ */
     uint8_t ch;
 
     uint32_t msk, val;
@@ -283,15 +268,6 @@ int main(void)
     BOARD_BootClockHSRUN();
     BOARD_InitDebugConsole();
 
-    /* Shut down higher 120K RAM for lower power consumption */
-    //POWER_EnablePD(kPDRUNCFG_PD_MEM9);
-    //POWER_EnablePD(kPDRUNCFG_PD_MEM8);
-   // POWER_EnablePD(kPDRUNCFG_PD_MEM7);
-    //POWER_EnablePD(kPDRUNCFG_PD_MEM6);
-   // POWER_EnablePD(kPDRUNCFG_PD_MEM5);
-  //  POWER_EnablePD(kPDRUNCFG_PD_MEM4);
-    //POWER_EnablePD(kPDRUNCFG_PD_MEM3);
-  //  POWER_EnablePD(kPDRUNCFG_PD_MEM2);
 
     POWER_Init();
 
@@ -300,7 +276,6 @@ int main(void)
     POWER_EnablePD(kPDRUNCFG_PD_OSC32M);
 
     /* Enable OSC_EN as interrupt and wakeup source */
-    //    SYSCON->PMU_CTRL0 = SYSCON->PMU_CTRL0 | SYSCON_PMU_CTRL0_OSC_INT_MSK_MASK;
     /* Power control 1 */
     msk = SYSCON_PMU_CTRL1_XTAL32K_PDM_DIS_MASK | SYSCON_PMU_CTRL1_RCO32K_PDM_DIS_MASK |
           SYSCON_PMU_CTRL1_XTAL32K_DIS_MASK | SYSCON_PMU_CTRL1_RCO32K_DIS_MASK;
@@ -331,10 +306,6 @@ int main(void)
     /* Disable ble core's clock. If ble core's clock is enabled, ahb can only be 8M, 16M or 32M */
     CLOCK_DisableClock(kCLOCK_Ble);
 
-    //    BUTTON_Init();
-    //    BUTTON_SetGpioWakeupLevel(BOARD_SW_GPIO, BOARD_SW1_GPIO_PIN, 0U);
-    //    BUTTON_SetGpioWakeupLevel(BOARD_SW_GPIO, BOARD_SW2_GPIO_PIN, 0U);
-
     RTC_Init(RTC);
 
     /* Enable RTC free running interrupt */
@@ -354,6 +325,9 @@ int main(void)
     PRINTF("    Sys Clock = %dHz \r\n", CLOCK_GetFreq(kCLOCK_CoreSysClk));
     PRINTF("    Ahb Clock = %dHz \r\n", CLOCK_GetFreq(kCLOCK_BusClk));
 
+/*******************************************************************************
+ * Read memory, read clock,  
+ ******************************************************************************/
     mem_loc = 0x16U;
 
     while (1)
@@ -363,166 +337,149 @@ int main(void)
             g_RtcFreeRunningFlag = 0U;
             PRINTF("Waked up by rtc free running interrupt.\r\n");
         }
-        //delay(1000000);
 
 
-        		    //read memory
-        					spi_master_config_t userConfig = {0};
-        					uint32_t srcFreq = 0;
-        					spi_transfer_t xfer = {0};
+/*******************************************************************************
+ * SPI read external eeprom memory 
+ ******************************************************************************/
+	spi_master_config_t userConfig = {0};
+	uint32_t srcFreq = 0;
+	spi_transfer_t xfer = {0};
 
 
-        					SPI_MasterGetDefaultConfig(&userConfig); //this will get default configurations for the SPI master such as baud rate and clock phase
-        					srcFreq = EXAMPLE_SPI_MASTER_CLK_FREQ; //gets frequency to run SPI functions
-        			        userConfig.sselNum = (spi_ssel_t)0; //this sets the SS pin to active low.
-        					userConfig.sselPol = (spi_spol_t)EXAMPLE_SPI_SPOL;	//set the clock polarity
-        					SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
+	SPI_MasterGetDefaultConfig(&userConfig); //this will get default configurations for the SPI master such as baud rate and clock phase
+	srcFreq = EXAMPLE_SPI_MASTER_CLK_FREQ; //gets frequency to run SPI functions
+	userConfig.sselNum = (spi_ssel_t)0; //this sets the SS pin to active low.
+	userConfig.sselPol = (spi_spol_t)EXAMPLE_SPI_SPOL;	//set the clock polarity
+	SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
 
-    			    						srcBuff3[0] = 0x03U; //read command
-    			                            srcBuff3[1] = 0x01U;//24 bit address
-    			                            srcBuff3[2] = 0x26U; //24 bit address
-    			                            srcBuff3[3] = mem_loc-2; //24 bit address
-    			                            srcBuff3[4] = 0x00U;// receive reply from eeprom
-    			                            srcBuff3[5] = 0x00U;// receive reply from eeprom
-    			                            //srcBuff3[6] = 0x00U;// receive reply from eeprom
-
-
-    			                            xfer.txData = srcBuff3; //data to be transfered
-    			                            xfer.rxData = destBuff3; //data to be received
-    			                            xfer.dataSize = sizeof(destBuff3);
-    			                            SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //data sent
-    			            			    SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
-
-    			                test = destBuff3[4];
-								digit1 = test & 0xF0;// select first 4 bits
-								digit1 = digit1>>4; //shift bits by 4.this is the first digit
-								digit2 = test & 0x0F;// this is the second digit
-    			                PRINTF("Previous Values: %d%d seconds %d uA \r\n",digit1, digit2,destBuff3[5]); // output data to console
-    			                PRINTF("Current Memory Location: %d \r\n", mem_loc); // digit 1 and two output to the console
-
-					//SPI read clock
-					userConfig.sselNum = (spi_ssel_t)EXAMPLE_SPI_SSEL; //this sets the SS pin to active high.
-					SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
-					/* Init Buffer*/
-
-										srcBuff2[0] = 0x92U; // selects the 'seconds' register and asks to read.
-										srcBuff2[1] = 0x00U; // selects the 'seconds' register and asks to read.
-										xfer.txData = srcBuff2;
-										xfer.rxData = destBuff2; //data is read and received at the same time
-										xfer.dataSize = sizeof(destBuff2);
-										SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //'seconds' register selected
-
-										/*Check if the data is right*/
-									  //output data to console
-										test = destBuff2[1];
-										digit1 = test & 0xF0;// select first 4 bits
-										digit1 = digit1>>4; //shift bits by 4.this is the first digit
-										digit2 = test & 0x0F;// this is the second digit
-										PRINTF("Time: %d%d seconds \r\n", digit1, digit2); // digit 1 and two output to the console
-										seconds = test;
+	srcBuff3[0] = 0x03U; //read command
+	srcBuff3[1] = 0x01U;//24 bit address
+	srcBuff3[2] = 0x26U; //24 bit address
+	srcBuff3[3] = mem_loc-2; //24 bit address
+	srcBuff3[4] = 0x00U;// receive reply from eeprom
+	srcBuff3[5] = 0x00U;// receive reply from eeprom
 
 
-			POWER_EnableADC(true);
-			ADC_Configuration();
-				//PRINTF("ADC configured \r\n");
+	xfer.txData = srcBuff3; //data to be transfered
+	xfer.rxData = destBuff3; //data to be received
+	xfer.dataSize = sizeof(destBuff3);
+	SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //data sent
+	SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
 
-				/**
-				 * ADC single mode
-				 * (Vext - Vinn) / Vref = Vreg / 2^22  ==> Vext = Vreg * Vref / 2^22 + Vinn
-				 */
-				float fresult;
-				uint32_t adcConvResult;
+	test = destBuff3[4];
+	    
+	digit1 = test & 0xF0;// select first 4 bits
+	digit1 = digit1>>4; //shift bits by 4.this is the first digit
+	digit2 = test & 0x0F;// this is the second digit
+	    
+	PRINTF("Previous Values: %d%d seconds %d uA \r\n",digit1, digit2,destBuff3[5]); // output data to console
+	PRINTF("Current Memory Location: %d \r\n", mem_loc); // digit 1 and two output to the console
 
-					/* Software triger */
-					ADC_DoSoftwareTrigger(DEMO_ADC_BASE);
-					/* Wait for convert complete */
-					while (!(ADC_GetStatusFlags(DEMO_ADC_BASE) & kADC_DataReadyFlag))
-					{
-					}
-					/* Get the result */
-					adcConvResult = ADC_GetConversionResult(DEMO_ADC_BASE);
+/*******************************************************************************
+ * SPI read external real time clock 
+ ******************************************************************************/
+	userConfig.sselNum = (spi_ssel_t)EXAMPLE_SPI_SSEL; //this sets the SS pin to active high.
+	SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
+	/* Init Buffer*/
 
-					fresult = ADC_ConversionResult2Mv(DEMO_ADC_BASE, DEMO_ADC_CHANNEL, DEMO_ADC_CFG_IDX, g_AdcBandgap, g_AdcVinn,
-													  adcConvResult);
-					//PRINTF("Original: 0x%x\t Ch: %d\t Result: %f(mv)\r\n", adcConvResult, DEMO_ADC_CHANNEL, fresult);
-					fresult = fresult/27;
-					//PRINTF("fresult: %f\r\n", fresult);
-					adc4 = (uint8_t) fresult;
-					//PRINTF("adc4: %d\r\n", adc4);
-					fresult = fresult-adc4;
-					//PRINTF("round: %f\r\n", fresult);
-					if (fresult>0.49)
-					{
-						adc4=adc4+1;
-					}
-					PRINTF("Light: %d uA \r\n", adc4);
+	srcBuff2[0] = 0x92U; // selects the 'seconds' register and asks to read.
+	srcBuff2[1] = 0x00U; // selects the 'seconds' register and asks to read.
+	xfer.txData = srcBuff2;
+	xfer.rxData = destBuff2; //data is read and received at the same time
+	xfer.dataSize = sizeof(destBuff2);
+	SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //'seconds' register selected
 
-					//store data in memory
-		userConfig.sselNum = (spi_ssel_t)0; //this sets the SS pin to active low.
-		SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
+	/*Check if the data is right*/
+ 	 //output data to console
+	test = destBuff2[1];
+	digit1 = test & 0xF0;// select first 4 bits
+	digit1 = digit1>>4; //shift bits by 4.this is the first digit
+	digit2 = test & 0x0F;// this is the second digit
+	PRINTF("Time: %d%d seconds \r\n", digit1, digit2); // digit 1 and two output to the console
+	seconds = test;
+
+/*******************************************************************************
+ * ADC reading 
+ ******************************************************************************/
+POWER_EnableADC(true);
+ADC_Configuration();
+
+	float fresult;
+	uint32_t adcConvResult;
+
+		/* Software triger */
+		ADC_DoSoftwareTrigger(DEMO_ADC_BASE);
+		/* Wait for convert complete */
+		while (!(ADC_GetStatusFlags(DEMO_ADC_BASE) & kADC_DataReadyFlag))
+		{
+		}
+		/* Get the result */
+		adcConvResult = ADC_GetConversionResult(DEMO_ADC_BASE);
+
+		fresult = ADC_ConversionResult2Mv(DEMO_ADC_BASE, DEMO_ADC_CHANNEL, DEMO_ADC_CFG_IDX, g_AdcBandgap, g_AdcVinn,
+										  adcConvResult);
+		//PRINTF("Original: 0x%x\t Ch: %d\t Result: %f(mv)\r\n", adcConvResult, DEMO_ADC_CHANNEL, fresult);
+		fresult = fresult/27;
+		//PRINTF("fresult: %f\r\n", fresult);
+		adc4 = (uint8_t) fresult;
+		//PRINTF("adc4: %d\r\n", adc4);
+		fresult = fresult-adc4;
+		//PRINTF("round: %f\r\n", fresult);
+		if (fresult>0.49)
+		{
+			adc4=adc4+1;
+		}
+		PRINTF("Light: %d uA \r\n", adc4);
+
+/*******************************************************************************
+ * SPI write to EEPROM memory (write time value from clock and adc value) 
+ ******************************************************************************/
+	    
+userConfig.sselNum = (spi_ssel_t)0; //this sets the SS pin to active low.
+SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
 
 
-		srcBuff5[0] = 0x06U; //Write Enable register written to.
+srcBuff5[0] = 0x06U; //Write Enable register written to.
 
 
-			/*Start Transfer*/
-		// data is both transfered and read by the master at the same time.
-		// for this case the received data isnt relevent as we have only written to the slave. not read
-			xfer.txData = srcBuff5; //data to be transfered
-			xfer.rxData = destBuff5; //data to be received
-			xfer.dataSize = sizeof(destBuff5);
+	/*Start Transfer*/
+// data is both transfered and read by the master at the same time.
+// for this case the received data isnt relevent as we have only written to the slave. not read
+	xfer.txData = srcBuff5; //data to be transfered
+	xfer.rxData = destBuff5; //data to be received
+	xfer.dataSize = sizeof(destBuff5);
+	SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //data sent
+	SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
+
+			srcBuff4[0] = 0x02U; //write command
+			srcBuff4[1] = 0x01U;	//24 bit address
+			srcBuff4[2] = 0x26U; //24 bit address
+			srcBuff4[3] = mem_loc; //24 bit address
+			srcBuff4[4] = seconds; //value to store
+			srcBuff4[5] = adc4; //value to store
+			//srcBuff4[6] = 0x03; //value to store
+
+
+			xfer.txData = srcBuff4; //data to be transfered
+			xfer.rxData = destBuff4; //data to be received
+			xfer.dataSize = sizeof(destBuff4);
 			SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //data sent
 			SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
+			PRINTF("Stored data in memory! \r\n"); // digit 1 and two output to the console
 
-					srcBuff4[0] = 0x02U; //write command
-					srcBuff4[1] = 0x01U;	//24 bit address
-					srcBuff4[2] = 0x26U; //24 bit address
-					srcBuff4[3] = mem_loc; //24 bit address
-					srcBuff4[4] = seconds; //value to store
-					srcBuff4[5] = adc4; //value to store
-					//srcBuff4[6] = 0x03; //value to store
+			mem_loc = mem_loc+2;
+	    
+/*******************************************************************************
+ * Put device to sleep for 10 seconds (10 seconds for demo purposes)
+ * Code taken from manufacturer
+ ******************************************************************************/
+	    
+PRINTF("Device put to sleep \r\n"); // digit 1 and two output to the console
 
+RTC_SetFreeRunningInterruptThreshold(RTC, RTC_GetFreeRunningCount(RTC) + RTC_INTERRUPT_THRESHOLD);
+RTC_FreeRunningEnable(RTC, true);
 
-					xfer.txData = srcBuff4; //data to be transfered
-					xfer.rxData = destBuff4; //data to be received
-					xfer.dataSize = sizeof(destBuff4);
-					SPI_MasterTransferBlocking(EXAMPLE_SPI_MASTER, &xfer); //data sent
-					SPI_MasterInit(EXAMPLE_SPI_MASTER, &userConfig, srcFreq); //initialises SPI master functionality
-					PRINTF("Stored data in memory! \r\n"); // digit 1 and two output to the console
-
-					mem_loc = mem_loc+2;
-					PRINTF("Device put to sleep \r\n"); // digit 1 and two output to the console
-
-//        PRINTF("\r\nSelect the desired operation \n\r\n");
-//        PRINTF("Press %c to enter: Active        - Normal RUN mode\r\n", kPmActive + 'a');
-//        PRINTF("Press %c to enter: Sleep         - Sleep mode\r\n", kPmSleep + 'a');
-//        PRINTF("Press %c to enter: Power down 0  - Power down 0 mode\r\n", kPmPowerDown0 + 'a');
-//        PRINTF("Press %c to enter: Power down 1  - Power down 1 mode\r\n", kPmPowerDown1 + 'a');
-//
-//        PRINTF("\r\nWaiting for power mode select...\r\n\r\n");
-
-
-        RTC_SetFreeRunningInterruptThreshold(RTC, RTC_GetFreeRunningCount(RTC) + RTC_INTERRUPT_THRESHOLD);
-        RTC_FreeRunningEnable(RTC, true);
-
-
-//                PRINTF(" Now in power down 0 mode for about 10 seconds.\r\n");
-//                __disable_irq();
-//                switch_to_OSC32M();
-//#if defined(CAP_SENSOR_WAKEUP)
-//                NVIC_ClearPendingIRQ(CS_WAKEUP_IRQn);
-//                NVIC_EnableIRQ(CS_WAKEUP_IRQn);
-//                CS->LP_CTRL |= CS_LP_CTRL_LP_EN_MASK;
-//#endif
-//                POWER_LatchIO();
-//                CLOCK_DisableClock(kCLOCK_Flexcomm0);
-//                POWER_EnterPowerDown(0);
-//                CLOCK_EnableClock(kCLOCK_Flexcomm0);
-//                POWER_RestoreIO();
-//                switch_to_XTAL();
-//                /* after waking up from pwoer down, usart config is lost, recover it */
-//                BOARD_WakeupRestore();
-//                __enable_irq();
         NVIC_ClearPendingIRQ(EXT_GPIO_WAKEUP_IRQn);
                        NVIC_EnableIRQ(EXT_GPIO_WAKEUP_IRQn);
                        __disable_irq();
